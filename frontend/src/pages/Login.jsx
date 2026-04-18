@@ -2,20 +2,42 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShieldCheck, Mail, Lock } from 'lucide-react';
 
+import axios from 'axios';
+
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const handleLogin = (e) => {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
+  const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
-    // Mock login delay
-    setTimeout(() => {
-      setLoading(false);
-      navigate('/dashboard');
-    }, 1000);
+    setError('');
+    
+    try {
+        const response = await axios.post(`${apiUrl}/api/login`, {
+            email,
+            password
+        });
+        
+        if (response.data.success) {
+            localStorage.setItem('auth_token', response.data.token);
+            // hard refresh or event to trigger App.jsx update
+            window.location.href = '/dashboard';
+        }
+    } catch (err) {
+        if (err.response && err.response.data && err.response.data.errors) {
+            setError(err.response.data.errors.email[0]);
+        } else {
+            setError('Login failed. Please try again.');
+        }
+    } finally {
+        setLoading(false);
+    }
   };
 
   return (
@@ -28,6 +50,12 @@ export default function Login() {
           <h1 className="text-2xl font-bold text-gray-800">Admin Portal</h1>
           <p className="text-gray-500 mt-1">Smart Waste Management System</p>
         </div>
+
+        {error && (
+            <div className="mb-6 p-3 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm text-center">
+                {error}
+            </div>
+        )}
 
         <form onSubmit={handleLogin} className="space-y-6">
           <div>
