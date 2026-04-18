@@ -8,5 +8,6 @@ Route::post('/login', [AuthController::class, 'login']);
 
 Route::get('/bin/status', [BinController::class, 'status']);
 Route::post('/bin/open', [BinController::class, 'open']);
+Route::post('/bin/empty', [BinController::class, 'empty']);
 Route::post('/device/sync', [BinController::class, 'sync']);
 Route::get('/logs/history', [BinController::class, 'history']);

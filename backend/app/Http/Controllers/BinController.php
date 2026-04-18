@@ -69,4 +69,18 @@ class BinController extends Controller
         $logs = HistoryLog::orderBy('created_at', 'desc')->take(50)->get();
         return response()->json($logs);
     }
+
+    public function empty()
+    {
+        $bin = Bin::firstOrCreate(['id' => 1]);
+        $bin->fill_level = 0;
+        $bin->save();
+
+        HistoryLog::create([
+            'event_type' => 'Empty / Reset',
+            'level' => 0
+        ]);
+
+        return response()->json(['success' => true, 'message' => 'Bin emptied successfully']);
+    }
 }

@@ -9,6 +9,7 @@ export default function Dashboard() {
     manual_open_command: false
   });
   const [opening, setOpening] = useState(false);
+  const [isLidForcedOpen, setIsLidForcedOpen] = useState(false);
   const [error, setError] = useState('');
 
   // We will setup env variable handling. Using relative path for proxy locally, or railway directly
@@ -38,13 +39,34 @@ export default function Dashboard() {
     try {
       await axios.post(`${apiUrl}/api/bin/open`, { command: true });
       setStatus(s => ({ ...s, manual_open_command: true }));
-      alert('Command Sent successfully');
+      setIsLidForcedOpen(true);
     } catch (err) {
       console.error(err);
       alert('Failed to send command to bin');
     } finally {
       setOpening(false);
     }
+  };
+
+  const handleTrashOut = async () => {
+    setOpening(true);
+    try {
+      await axios.post(`${apiUrl}/api/bin/empty`);
+      // Update local state proactively
+      setStatus(s => ({ ...s, fill_level: 0, manual_open_command: false }));
+      setIsLidForcedOpen(false);
+      alert('Trash successfully taken out!');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to record empty trash state');
+    } finally {
+      setOpening(false);
+    }
+  };
+
+  const handleCancelOpen = () => {
+     // User just wanted to test/force open but not empty trash. Close it.
+     setIsLidForcedOpen(false);
   };
 
   const isFull = status.fill_level >= 81;
@@ -113,20 +135,43 @@ export default function Dashboard() {
             <p className="text-gray-500 text-sm mb-6">
                 Force the bin lid to open immediately, overriding the hardware sensors.
             </p>
-            <button
-                onClick={handleForceOpen}
-                disabled={opening}
-                className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-4 px-6 rounded-2xl shadow-sm transition-colors duration-200 flex justify-center items-center disabled:opacity-70 disabled:cursor-not-allowed"
-            >
-                {opening ? (
-                    <>
-                        <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-3"></span>
-                        Lid Opening...
-                    </>
-                ) : (
-                    'Force Open Lid'
-                )}
-            </button>
+            
+            {!isLidForcedOpen ? (
+                <button
+                    onClick={handleForceOpen}
+                    disabled={opening}
+                    className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-4 px-6 rounded-2xl shadow-sm transition-colors duration-200 flex justify-center items-center disabled:opacity-70 disabled:cursor-not-allowed"
+                >
+                    {opening ? (
+                        <>
+                            <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-3"></span>
+                            Opening...
+                        </>
+                    ) : (
+                        'Force Open Lid'
+                    )}
+                </button>
+            ) : (
+                <div className="flex flex-col space-y-3">
+                    <div className="bg-green-50 text-green-700 text-sm p-3 rounded-lg text-center mb-2 animate-pulse">
+                        Lid is open!
+                    </div>
+                    <button
+                        onClick={handleTrashOut}
+                        disabled={opening}
+                        className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-xl shadow-sm transition-colors duration-200 flex justify-center items-center disabled:opacity-70 disabled:cursor-not-allowed"
+                    >
+                        {opening ? 'Processing...' : 'Confirm Trash Out'}
+                    </button>
+                    <button
+                        onClick={handleCancelOpen}
+                        disabled={opening}
+                        className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 px-6 rounded-xl shadow-sm transition-colors duration-200 flex justify-center items-center disabled:opacity-70 disabled:cursor-not-allowed"
+                    >
+                        Cancel / Keep Trash
+                    </button>
+                </div>
+            )}
         </div>
       </div>
     </div>
