@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { Activity, Battery, AlertTriangle, Key } from 'lucide-react';
 
@@ -12,17 +12,39 @@ export default function Dashboard() {
   const [isLidForcedOpen, setIsLidForcedOpen] = useState(false);
   const [error, setError] = useState('');
 
+  const hasAlerted = useRef(false);
+
   // We will setup env variable handling. Using relative path for proxy locally, or railway directly
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
   useEffect(() => {
+    // Request notification permission on mount
+    if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
+        Notification.requestPermission();
+    }
+
     // In a real scenario, this polls the API every 3-5 seconds
     const fetchStatus = async () => {
       try {
-        // Temporarily mocking data if backend isn't ready
         const response = await axios.get(`${apiUrl}/api/bin/status`);
         setStatus(response.data);
         setError('');
+
+        // Trigger system alert if hit 80%
+        if (response.data.fill_level >= 80 && !hasAlerted.current) {
+            hasAlerted.current = true;
+            if ("Notification" in window && Notification.permission === "granted") {
+                new Notification("🛑 Smart Bin Alert", { 
+                    body: `Bin is nearly full (${response.data.fill_level}%). Please empty it soon.` 
+                });
+            } else {
+                alert(`WARNING: Smart Bin is nearly full (${response.data.fill_level}%). Maintenance required.`);
+            }
+        } else if (response.data.fill_level < 80) {
+            // Reset alert flag if trash was taken out
+            hasAlerted.current = false;
+        }
+
       } catch (err) {
         console.error(err);
         setError('Failed to connect to Bin API');
